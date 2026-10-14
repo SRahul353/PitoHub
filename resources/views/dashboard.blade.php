@@ -38,9 +38,18 @@
                     <span class="w-2 h-2 mr-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     API Active (v1)
                 </span>
-                <div class="text-xs text-slate-400 text-right hidden sm:block">
-                    <div class="text-slate-200 font-medium">admin@pitohub.local</div>
-                    <div class="text-slate-500">Super Administrator</div>
+                <div class="flex items-center space-x-3">
+                    <div class="text-xs text-slate-400 text-right hidden sm:block">
+                        <div class="text-slate-200 font-medium">{{ auth()->user()->name ?? 'Administrator' }}</div>
+                        <div class="text-slate-500 font-mono text-[11px]">{{ auth()->user()->email ?? 'admin@pitohub.local' }}</div>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-rose-400 hover:text-rose-300 transition flex items-center space-x-1.5 shadow-sm">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            <span>Logout</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
