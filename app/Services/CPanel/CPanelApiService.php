@@ -3,7 +3,6 @@
 namespace App\Services\CPanel;
 
 use App\Models\Server;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -57,24 +56,25 @@ class CPanelApiService
             return [
                 'metadata' => [
                     'result' => 0,
-                    'reason' => "WHM API Error: HTTP " . $response->status() . " - " . $response->body(),
+                    'reason' => 'WHM API Error: HTTP '.$response->status().' - '.$response->body(),
                 ],
             ];
         } catch (\Throwable $e) {
-            Log::error("WHM Call to {$this->server->hostname} failed: " . $e->getMessage());
+            Log::error("WHM Call to {$this->server->hostname} failed: ".$e->getMessage());
 
             // If connection fails and mock fallback is acceptable
             return [
                 'metadata' => [
                     'result' => 0,
-                    'reason' => 'Connection failed: ' . $e->getMessage(),
+                    'reason' => 'Connection failed: '.$e->getMessage(),
                 ],
             ];
         }
     }
 
     /**
-     * Execute a cPanel UAPI call through WHM
+     * Execute a cPanel UAPI call
+     * Supports both Direct Shared cPanel (port 2083/execute) and WHM proxy (port 2087/json-api/cpanel)
      */
     public function uapiCall(string $cpanelUser, string $module, string $function, array $params = []): array
     {
@@ -82,6 +82,53 @@ class CPanelApiService
             return $this->handleMockUapiCall($cpanelUser, $module, $function, $params);
         }
 
+        // Direct Shared cPanel Connection (port 2083)
+        if (($this->server->server_type ?? 'whm') === 'cpanel_shared' || $this->server->port == 2083) {
+            $url = "{$this->server->base_url}/execute/{$module}/{$function}";
+            try {
+                $client = Http::timeout(20)->withoutVerifying();
+
+                if ($this->server->auth_type === 'api_token' && $this->server->api_token) {
+                    $client = $client->withHeaders([
+                        'Authorization' => "cpanel {$this->server->username}:{$this->server->api_token}",
+                    ]);
+                } elseif ($this->server->password) {
+                    $client = $client->withBasicAuth($this->server->username, $this->server->password);
+                }
+
+                $response = $client->get($url, $params);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+
+                    return [
+                        'status' => $json['status'] ?? ($json['result']['status'] ?? 1),
+                        'data' => $json['data'] ?? ($json['result']['data'] ?? []),
+                        'errors' => $json['errors'] ?? null,
+                        'messages' => $json['messages'] ?? null,
+                        'result' => $json,
+                    ];
+                }
+
+                return [
+                    'status' => 0,
+                    'result' => [
+                        'status' => 0,
+                        'errors' => ['cPanel Direct UAPI Error: HTTP '.$response->status().' - '.$response->body()],
+                    ],
+                ];
+            } catch (\Throwable $e) {
+                return [
+                    'status' => 0,
+                    'result' => [
+                        'status' => 0,
+                        'errors' => ['cPanel Direct UAPI Call failed: '.$e->getMessage()],
+                    ],
+                ];
+            }
+        }
+
+        // WHM Proxy Call (port 2087)
         $url = "{$this->server->base_url}/json-api/cpanel";
         $whmParams = array_merge([
             'api.version' => 1,
@@ -111,14 +158,14 @@ class CPanelApiService
             return [
                 'result' => [
                     'status' => 0,
-                    'errors' => ["UAPI Error: HTTP " . $response->status()],
+                    'errors' => ['UAPI Error: HTTP '.$response->status()],
                 ],
             ];
         } catch (\Throwable $e) {
             return [
                 'result' => [
                     'status' => 0,
-                    'errors' => ['UAPI Call failed: ' . $e->getMessage()],
+                    'errors' => ['UAPI Call failed: '.$e->getMessage()],
                 ],
             ];
         }
@@ -134,7 +181,36 @@ class CPanelApiService
                 'success' => true,
                 'version' => '11.118.0.12 (Mock Mode)',
                 'hostname' => $this->server->hostname,
-                'message' => 'Successfully connected to simulated cPanel/WHM server.',
+                'message' => 'Successfully connected to simulated server.',
+            ];
+        }
+
+        // Direct Shared cPanel connection test
+        if (($this->server->server_type ?? 'whm') === 'cpanel_shared' || $this->server->port == 2083) {
+            $res = $this->uapiCall($this->server->username, 'Variables', 'get_user_information');
+            if (! empty($res['status']) || isset($res['data']['user'])) {
+                return [
+                    'success' => true,
+                    'version' => 'cPanel Direct Shared (UAPI)',
+                    'hostname' => $this->server->hostname,
+                    'message' => 'Successfully connected to shared cPanel account ('.$this->server->username.').',
+                ];
+            }
+
+            // Fallback check with Email or DomainInfo
+            $fallback = $this->uapiCall($this->server->username, 'DomainInfo', 'list_domains');
+            if (! empty($fallback['status']) || isset($fallback['data']['main_domain'])) {
+                return [
+                    'success' => true,
+                    'version' => 'cPanel Direct Shared (UAPI)',
+                    'hostname' => $this->server->hostname,
+                    'message' => 'Successfully connected to shared cPanel account.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $res['result']['errors'][0] ?? 'Could not authenticate with shared cPanel account. Check username and API Token/Password.',
             ];
         }
 
@@ -174,7 +250,7 @@ class CPanelApiService
             'domain' => $data['domain'],
             'plan' => $data['plan'] ?? 'default',
             'contactemail' => $data['contact_email'] ?? '',
-            'password' => $data['password'] ?? 'PitoHub_' . bin2hex(random_bytes(4)),
+            'password' => $data['password'] ?? 'PitoHub_'.bin2hex(random_bytes(4)),
             'quota' => $data['disk_limit_mb'] ?? 5120,
             'bwlimit' => $data['bandwidth_limit_mb'] ?? 51200,
         ]);
@@ -242,8 +318,8 @@ class CPanelApiService
         if ($this->server->mock_mode) {
             return [
                 'status' => 1,
-                'url' => "{$this->server->base_url}/cpsess" . rand(1000000000, 9999999999) . "/login/?user={$username}",
-                'token' => 'cpsess_mock_' . bin2hex(random_bytes(8)),
+                'url' => "{$this->server->base_url}/cpsess".rand(1000000000, 9999999999)."/login/?user={$username}",
+                'token' => 'cpsess_mock_'.bin2hex(random_bytes(8)),
             ];
         }
 
@@ -284,6 +360,7 @@ class CPanelApiService
         }
 
         $loadRes = $this->whmCall('systemloadavg');
+
         return [
             'load_avg' => [
                 $loadRes['data']['one'] ?? 0.25,
@@ -346,8 +423,8 @@ class CPanelApiService
             'create_user_session' => [
                 'metadata' => ['result' => 1, 'reason' => 'OK'],
                 'data' => [
-                    'url' => "{$this->server->base_url}/cpsess" . rand(10000000, 99999999) . "/login/?user={$params['user']}",
-                    'session_token' => 'mock_token_' . bin2hex(random_bytes(6)),
+                    'url' => "{$this->server->base_url}/cpsess".rand(10000000, 99999999)."/login/?user={$params['user']}",
+                    'session_token' => 'mock_token_'.bin2hex(random_bytes(6)),
                 ],
             ],
             default => [

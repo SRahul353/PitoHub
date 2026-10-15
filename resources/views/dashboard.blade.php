@@ -40,7 +40,12 @@
                 </span>
                 <div class="flex items-center space-x-3">
                     <div class="text-xs text-slate-400 text-right hidden sm:block">
-                        <div class="text-slate-200 font-medium">{{ auth()->user()->name ?? 'Administrator' }}</div>
+                        <div class="text-slate-200 font-medium flex items-center justify-end space-x-1.5">
+                            <span>{{ auth()->user()->name ?? 'Administrator' }}</span>
+                            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase {{ (auth()->user()->role ?? 'admin') === 'admin' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30' }}">
+                                {{ auth()->user()->role ?? 'admin' }}
+                            </span>
+                        </div>
                         <div class="text-slate-500 font-mono text-[11px]">{{ auth()->user()->email ?? 'admin@pitohub.local' }}</div>
                     </div>
                     <form method="POST" action="{{ route('logout') }}">
@@ -148,30 +153,39 @@
         <!-- Navigation Tabs -->
         <div class="flex flex-wrap gap-2 border-b border-slate-800 pb-3" id="tabButtons">
             <button onclick="switchTab('accountsTab')" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30" data-target="accountsTab">
-                cPanel Accounts ({{ $accounts->total() }})
+                {{ $isAdmin ? 'cPanel Accounts (' . $accounts->total() . ')' : 'My Hosted Websites (' . $accounts->total() . ')' }}
             </button>
-            <button onclick="switchTab('serversTab')" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-slate-800/80 hover:bg-slate-700 text-slate-300" data-target="serversTab">
-                WHM Servers ({{ $servers->count() }})
+            @if($isAdmin)
+            <button onclick="switchTab('serversTab')" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-slate-800/80 hover:bg-slate-700 text-slate-300 flex items-center space-x-2" data-target="serversTab">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>cPanel API Config & Connections ({{ $servers->count() }})</span>
             </button>
+            @endif
             <button onclick="switchTab('apiExplorerTab')" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-slate-800/80 hover:bg-slate-700 text-slate-300" data-target="apiExplorerTab">
-                REST API Explorer & Documentation
+                REST API Explorer
             </button>
+            @if($isAdmin)
             <button onclick="switchTab('logsTab')" class="tab-btn px-4 py-2 rounded-xl text-sm font-semibold transition bg-slate-800/80 hover:bg-slate-700 text-slate-300" data-target="logsTab">
                 Activity Logs
             </button>
+            @endif
         </div>
 
         <!-- TAB 1: ACCOUNTS -->
         <div id="accountsTab" class="tab-content space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-white">Hosting Accounts</h2>
-                    <p class="text-sm text-slate-400">Manage cPanel instances, quotas, domains, SSO and suspensions</p>
+                    <h2 class="text-xl font-bold text-white">{{ $isAdmin ? 'Hosting Accounts' : 'Your Hosted Websites & Features' }}</h2>
+                    <p class="text-sm text-slate-400">
+                        {{ $isAdmin ? 'Manage cPanel instances, quotas, domains, SSO and suspensions' : 'Manage your domains, databases, emails, and cron jobs' }}
+                    </p>
                 </div>
+                @if($isAdmin)
                 <button onclick="document.getElementById('newAccountModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/20 flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     <span>Create cPanel Account</span>
                 </button>
+                @endif
             </div>
 
             <!-- Accounts Table -->
@@ -239,6 +253,7 @@
                                         <span>cPanel Login</span>
                                     </button>
 
+                                    @if($isAdmin)
                                     <!-- Suspend/Unsuspend Button -->
                                     <form method="POST" action="{{ route('web.accounts.toggle-suspension', $acc->id) }}" class="inline-block">
                                         @csrf
@@ -246,6 +261,7 @@
                                             {{ $acc->is_suspended ? 'Unsuspend' : 'Suspend' }}
                                         </button>
                                     </form>
+                                    @endif
                                 </td>
                             </tr>
                             @empty
@@ -266,31 +282,49 @@
             </div>
         </div>
 
-        <!-- TAB 2: SERVERS -->
+        <!-- TAB 2: SERVERS / CPANEL CONFIGURATION PANEL -->
         <div id="serversTab" class="tab-content hidden space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-white">cPanel & WHM Servers</h2>
-                    <p class="text-sm text-slate-400">Manage nodes, sync accounts, and verify API authentication tokens</p>
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span>cPanel & WHM Configuration Panel</span>
+                    </h2>
+                    <p class="text-sm text-slate-400">Configure connection credentials (UAPI / WHM), API tokens, ports, and verify live connectivity</p>
                 </div>
                 <button onclick="document.getElementById('newServerModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/20 flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span>Connect New WHM Server</span>
+                    <span>Add / Connect cPanel or WHM</span>
                 </button>
             </div>
 
+            <!-- Configuration Helper Banner -->
+            <div class="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-slate-300 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <span class="font-bold text-indigo-300 block">Shared cPanel (Single Account Access):</span>
+                    <p class="text-slate-400">Use Port <strong class="text-white">2083</strong>. In cPanel, navigate to <em>Security &rarr; Manage API Tokens</em> to generate your token. PitoHub executes direct UAPI commands for MySQL, Email, Subdomains & Cron.</p>
+                </div>
+                <div class="space-y-1">
+                    <span class="font-bold text-amber-300 block">WHM Reseller / Root (Multi-Account Access):</span>
+                    <p class="text-slate-400">Use Port <strong class="text-white">2087</strong>. Generate a WHM API Token under <em>Development &rarr; Manage API Tokens</em>. Allows creating accounts, suspension, package changes, and sync.</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @foreach($servers as $s)
-                <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/60 space-y-4">
+                @forelse($servers as $s)
+                <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/60 space-y-4 relative">
                     <div class="flex items-start justify-between">
                         <div>
                             <div class="flex items-center space-x-2">
                                 <h3 class="font-bold text-lg text-white">{{ $s->name }}</h3>
+                                <span class="px-2 py-0.5 text-[11px] font-semibold rounded {{ ($s->server_type ?? 'cpanel_shared') === 'cpanel_shared' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20' }}">
+                                    {{ ($s->server_type ?? 'cpanel_shared') === 'cpanel_shared' ? 'cPanel Shared (2083)' : 'WHM Server (2087)' }}
+                                </span>
                                 @if($s->mock_mode)
                                     <span class="px-2 py-0.5 text-[11px] rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Simulation Mode</span>
                                 @endif
                             </div>
-                            <p class="text-xs text-slate-400 font-mono mt-0.5">{{ $s->hostname }}:{{ $s->port }} ({{ $s->ip_address ?? 'Auto IP' }})</p>
+                            <p class="text-xs text-slate-400 font-mono mt-0.5">{{ $s->hostname }}:{{ $s->port }} (User: <span class="text-indigo-300 font-semibold">{{ $s->username }}</span>)</p>
                         </div>
                         <span class="px-2.5 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
                             {{ ucfirst($s->status) }}
@@ -299,39 +333,70 @@
 
                     <div class="grid grid-cols-2 gap-3 text-xs bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div>
-                            <span class="text-slate-500 block">Active Accounts</span>
-                            <span class="font-semibold text-slate-200 text-sm">{{ $s->active_accounts_count }} / {{ $s->max_accounts }}</span>
+                            <span class="text-slate-500 block">Host / IP</span>
+                            <span class="font-semibold text-slate-200 text-xs font-mono">{{ $s->ip_address ?? $s->hostname }}</span>
                         </div>
                         <div>
                             <span class="text-slate-500 block">Auth Method</span>
-                            <span class="font-semibold text-slate-200 text-sm uppercase">{{ $s->auth_type }}</span>
+                            <span class="font-semibold text-slate-200 text-xs uppercase">{{ $s->auth_type }} (Token Protected)</span>
                         </div>
-                        <div class="col-span-2">
+                        <div>
+                            <span class="text-slate-500 block">Active Accounts</span>
+                            <span class="font-semibold text-slate-200 text-sm">{{ $s->active_accounts_count }} accounts</span>
+                        </div>
+                        <div>
                             <span class="text-slate-500 block">Last Synced</span>
                             <span class="text-slate-300">{{ $s->last_synced_at ? $s->last_synced_at->diffForHumans() : 'Never synced' }}</span>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between pt-2">
-                        <!-- Test Connection AJAX -->
-                        <button onclick="testServerConnection({{ $s->id }})" id="testBtn-{{ $s->id }}" class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium flex items-center space-x-1.5">
-                            <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                            <span>Test API Connection</span>
-                        </button>
-
-                        <!-- Sync Accounts -->
-                        <form method="POST" action="{{ route('web.servers.sync', $s->id) }}">
-                            @csrf
-                            <button type="submit" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-medium flex items-center space-x-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                <span>Sync WHM Accounts</span>
+                    <div class="flex items-center justify-between pt-2 gap-2 flex-wrap">
+                        <div class="flex items-center space-x-2">
+                            <!-- Test Connection AJAX -->
+                            <button onclick="testServerConnection({{ $s->id }})" id="testBtn-{{ $s->id }}" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center space-x-1.5 shadow-sm">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <span>Check Connection</span>
                             </button>
-                        </form>
+
+                            <!-- Edit Config Modal Trigger -->
+                            <button onclick="openEditServerModal({{ json_encode($s) }})" class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium flex items-center space-x-1.5">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                <span>Configure</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center space-x-2">
+                            @if(($s->server_type ?? 'cpanel_shared') === 'whm')
+                            <!-- Sync Accounts -->
+                            <form method="POST" action="{{ route('web.servers.sync', $s->id) }}">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-medium flex items-center space-x-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    <span>Sync</span>
+                                </button>
+                            </form>
+                            @endif
+
+                            <!-- Delete Server -->
+                            <form method="POST" action="{{ route('web.servers.delete', $s->id) }}" onsubmit="return confirm('Remove server config {{ $s->name }}?');">
+                                @csrf
+                                <button type="submit" class="p-1.5 text-xs rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20" title="Delete connection">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    <div id="testResult-{{ $s->id }}" class="hidden text-xs p-3 rounded-xl"></div>
+                    <div id="testResult-{{ $s->id }}" class="hidden text-xs p-3 rounded-xl transition"></div>
                 </div>
-                @endforeach
+                @empty
+                <div class="col-span-2 p-8 rounded-2xl bg-slate-800/40 border border-slate-700/60 text-center text-slate-400 space-y-3">
+                    <p>No cPanel or WHM connections configured yet.</p>
+                    <button onclick="document.getElementById('newServerModal').classList.remove('hidden')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+                        Add Your First cPanel Connection
+                    </button>
+                </div>
+                @endforelse
             </div>
         </div>
 
@@ -355,8 +420,8 @@
                 </div>
                 <p class="text-xs text-slate-300">All protected endpoints require a Sanctum Bearer token in the <code class="text-indigo-300 font-mono">Authorization</code> header:</p>
                 <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto">
-                    <span>Authorization: Bearer {{ $adminUser?->tokens()->latest()->first()?->token ? '2|Yq4GtvLOPDxwv6hW...' : '<YOUR_SANCTUM_TOKEN>' }}</span>
-                    <button onclick="navigator.clipboard.writeText('admin@pitohub.local / password123'); alert('Admin credentials copied!');" class="text-xs text-slate-400 hover:text-white ml-4">Copy Auth</button>
+                    <span>Authorization: Bearer {{ ($user ?? auth()->user())?->tokens()->latest()->first()?->token ? '2|Yq4GtvLOPDxwv6hW...' : '<YOUR_SANCTUM_TOKEN>' }}</span>
+                    <button onclick="navigator.clipboard.writeText('{{ ($user ?? auth()->user())?->email ?? 'admin@pitohub.local' }} / password123'); alert('Credentials copied!');" class="text-xs text-slate-400 hover:text-white ml-4">Copy Auth</button>
                 </div>
             </div>
 
@@ -559,9 +624,20 @@
                         <input type="number" name="disk_limit_mb" value="5120" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Contact Email</label>
-                    <input type="email" name="contact_email" placeholder="client@example.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Contact Email</label>
+                        <input type="email" name="contact_email" placeholder="client@example.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Assign to User</label>
+                        <select name="user_id" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                            <option value="">-- No User (Unassigned) --</option>
+                            @foreach($allUsers as $u)
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }}) [{{ $u->role }}]</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
                 <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
                     <button type="button" onclick="document.getElementById('newAccountModal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-medium hover:bg-slate-700">Cancel</button>
@@ -575,38 +651,47 @@
     <div id="newServerModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-lg font-bold text-white">Connect WHM Server</h3>
+                <h3 class="text-lg font-bold text-white">Connect Server or cPanel Account</h3>
                 <button onclick="document.getElementById('newServerModal').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl">&times;</button>
             </div>
             <form method="POST" action="{{ route('web.servers.store') }}" class="space-y-4 text-sm">
                 @csrf
-                <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Server Friendly Name *</label>
-                    <input type="text" name="name" placeholder="e.g. US-Central WHM Node 03" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Server Friendly Name *</label>
+                        <input type="text" name="name" placeholder="e.g. My Shared cPanel" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Connection Type *</label>
+                        <select name="server_type" onchange="document.getElementById('server_port').value = this.value === 'cpanel_shared' ? 2083 : 2087" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                            <option value="cpanel_shared" selected>Shared cPanel Account (Port 2083)</option>
+                            <option value="whm">WHM Reseller / Root (Port 2087)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div class="col-span-2">
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Hostname *</label>
-                        <input type="text" name="hostname" placeholder="whm.example.com" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Hostname or Domain *</label>
+                        <input type="text" name="hostname" placeholder="cpanel.yourdomain.com" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-300 mb-1">Port</label>
-                        <input type="number" name="port" value="2087" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                        <input type="number" name="port" id="server_port" value="2083" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">WHM Username *</label>
-                        <input type="text" name="username" value="root" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Username (cPanel user or root) *</label>
+                        <input type="text" name="username" placeholder="cpanel_username" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-1">Server IP</label>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Server IP (Optional)</label>
                         <input type="text" name="ip_address" placeholder="192.0.2.1" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">WHM API Token</label>
-                    <input type="password" name="api_token" placeholder="Paste WHM API Token here" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    <label class="block text-xs font-medium text-slate-300 mb-1">API Token (Manage API Tokens in cPanel / WHM)</label>
+                    <input type="password" name="api_token" placeholder="Paste cPanel or WHM API Token here" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
                 </div>
                 <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center space-x-2">
                     <input type="checkbox" name="mock_mode" id="mock_mode" value="1" checked class="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0">
@@ -622,8 +707,82 @@
         </div>
     </div>
 
+    <!-- Edit / Configure Server Modal -->
+    <div id="editServerModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    <span>Edit cPanel / WHM Configuration</span>
+                </h3>
+                <button onclick="document.getElementById('editServerModal').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <form id="editServerForm" method="POST" action="" class="space-y-4 text-sm">
+                @csrf
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Friendly Name *</label>
+                        <input type="text" name="name" id="edit_server_name" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Connection Type *</label>
+                        <select name="server_type" id="edit_server_type" onchange="document.getElementById('edit_server_port').value = this.value === 'cpanel_shared' ? 2083 : 2087" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                            <option value="cpanel_shared">Shared cPanel (Port 2083)</option>
+                            <option value="whm">WHM Reseller / Root (Port 2087)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Hostname or Domain *</label>
+                        <input type="text" name="hostname" id="edit_server_hostname" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Port</label>
+                        <input type="number" name="port" id="edit_server_port" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">cPanel / WHM Username *</label>
+                        <input type="text" name="username" id="edit_server_username" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Server IP (Optional)</label>
+                        <input type="text" name="ip_address" id="edit_server_ip" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">New API Token (Leave empty to keep current)</label>
+                    <input type="password" name="api_token" placeholder="Enter new API Token if updating" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center space-x-2">
+                    <input type="checkbox" name="mock_mode" id="edit_server_mock" value="1" class="rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-0">
+                    <label for="edit_server_mock" class="text-xs text-purple-300">
+                        Enable Simulation Mode (Local testing without real cPanel server)
+                    </label>
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="document.getElementById('editServerModal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-medium hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium shadow-md shadow-indigo-600/30">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Client Script -->
     <script>
+        function openEditServerModal(server) {
+            document.getElementById('editServerForm').action = `/web/servers/${server.id}/update`;
+            document.getElementById('edit_server_name').value = server.name || '';
+            document.getElementById('edit_server_type').value = server.server_type || 'cpanel_shared';
+            document.getElementById('edit_server_hostname').value = server.hostname || '';
+            document.getElementById('edit_server_port').value = server.port || (server.server_type === 'cpanel_shared' ? 2083 : 2087);
+            document.getElementById('edit_server_username').value = server.username || '';
+            document.getElementById('edit_server_ip').value = server.ip_address || '';
+            document.getElementById('edit_server_mock').checked = Boolean(server.mock_mode);
+            document.getElementById('editServerModal').classList.remove('hidden');
+        }
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {

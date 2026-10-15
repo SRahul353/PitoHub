@@ -25,10 +25,12 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@pitohub.local'],
             [
                 'name' => 'PitoHub Admin',
+                'role' => 'admin',
                 'password' => Hash::make('password123'),
                 'email_verified_at' => now(),
             ]
         );
+        $admin->update(['role' => 'admin']);
 
         // Pre-generate a Sanctum token
         $admin->tokens()->delete();
@@ -247,7 +249,7 @@ class DatabaseSeeder extends Seeder
         ActivityLog::create([
             'user_id' => $admin->id,
             'action' => 'server.sync',
-            'description' => "Synced accounts for US-East Production WHM",
+            'description' => 'Synced accounts for US-East Production WHM',
             'target_type' => 'Server',
             'target_id' => (string) $server1->id,
             'ip_address' => '127.0.0.1',

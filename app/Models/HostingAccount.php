@@ -13,6 +13,7 @@ class HostingAccount extends Model
 
     protected $fillable = [
         'server_id',
+        'user_id',
         'domain',
         'username',
         'contact_email',
@@ -40,6 +41,11 @@ class HostingAccount extends Model
             'suspended_at' => 'datetime',
             'cpanel_created_at' => 'datetime',
         ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function server(): BelongsTo

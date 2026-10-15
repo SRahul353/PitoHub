@@ -17,6 +17,8 @@ class CronJobEntityController extends Controller
      */
     public function index(HostingAccount $account): JsonResponse
     {
+        $this->authorize('view', $account);
+
         return response()->json([
             'success' => true,
             'data' => $account->cronJobs()->latest()->get(),
@@ -28,6 +30,8 @@ class CronJobEntityController extends Controller
      */
     public function store(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         $validated = $request->validate([
             'schedule' => 'required|string|max:100', // e.g. "0 * * * *"
             'command' => 'required|string',
@@ -67,6 +71,8 @@ class CronJobEntityController extends Controller
      */
     public function destroy(HostingAccount $account, CronJobEntity $cronjob): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         if ($cronjob->hosting_account_id !== $account->id) {
             return response()->json(['error' => 'Resource not found for this account'], 404);
         }

@@ -17,6 +17,8 @@ class EmailAccountController extends Controller
      */
     public function index(HostingAccount $account): JsonResponse
     {
+        $this->authorize('view', $account);
+
         return response()->json([
             'success' => true,
             'data' => $account->emailAccounts()->latest()->get(),
@@ -28,6 +30,8 @@ class EmailAccountController extends Controller
      */
     public function store(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         $validated = $request->validate([
             'email' => 'required|email',
             'password' => 'required|string|min:8',
@@ -72,6 +76,8 @@ class EmailAccountController extends Controller
      */
     public function destroy(HostingAccount $account, EmailAccount $email): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         if ($email->hosting_account_id !== $account->id) {
             return response()->json(['error' => 'Resource not found for this account'], 404);
         }

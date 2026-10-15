@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\ServerController;
 use App\Models\Server;
 use App\Services\CPanel\CPanelApiService;
 use Illuminate\Console\Command;
@@ -31,6 +32,7 @@ class PitoHubSyncCommand extends Command
 
         if ($servers->isEmpty()) {
             $this->warn('No active servers found to sync.');
+
             return Command::SUCCESS;
         }
 
@@ -39,20 +41,22 @@ class PitoHubSyncCommand extends Command
             $service = CPanelApiService::forServer($server);
             $test = $service->testConnection();
 
-            if (!($test['success'] ?? false)) {
-                $this->error("Failed to connect to {$server->name}: " . ($test['error'] ?? 'Unknown error'));
+            if (! ($test['success'] ?? false)) {
+                $this->error("Failed to connect to {$server->name}: ".($test['error'] ?? 'Unknown error'));
+
                 continue;
             }
 
-            $this->info("Connected successfully. Fetching accounts...");
-            $serverController = app(\App\Http\Controllers\Api\ServerController::class);
+            $this->info('Connected successfully. Fetching accounts...');
+            $serverController = app(ServerController::class);
             $response = $serverController->syncAccounts($server);
             $data = $response->getData(true);
 
-            $this->line("Synced: " . ($data['message'] ?? 'OK'));
+            $this->line('Synced: '.($data['message'] ?? 'OK'));
         }
 
         $this->info('Server sync process completed.');
+
         return Command::SUCCESS;
     }
 }

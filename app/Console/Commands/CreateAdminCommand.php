@@ -31,13 +31,14 @@ class CreateAdminCommand extends Command
             ['email' => $email],
             [
                 'name' => $name,
+                'role' => 'admin',
                 'password' => Hash::make($password),
             ]
         );
 
         $token = $user->createToken('PitoHub CLI Admin Token')->plainTextToken;
 
-        $this->info("Administrator account ready!");
+        $this->info('Administrator account ready!');
         $this->table(
             ['Field', 'Value'],
             [

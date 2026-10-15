@@ -17,7 +17,15 @@ class HostingAccountController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = HostingAccount::with('server:id,name,hostname,ip_address,status');
+
+        // Non-admin users can only view their own accounts
+        if ($user && ! $user->isAdmin()) {
+            $query->where('user_id', $user->id);
+        } elseif ($request->has('user_id')) {
+            $query->where('user_id', $request->query('user_id'));
+        }
 
         if ($request->has('server_id')) {
             $query->where('server_id', $request->query('server_id'));
@@ -31,8 +39,8 @@ class HostingAccountController extends Controller
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('username', 'like', "%{$search}%")
-                  ->orWhere('domain', 'like', "%{$search}%")
-                  ->orWhere('contact_email', 'like', "%{$search}%");
+                    ->orWhere('domain', 'like', "%{$search}%")
+                    ->orWhere('contact_email', 'like', "%{$search}%");
             });
         }
 
@@ -49,8 +57,11 @@ class HostingAccountController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', HostingAccount::class);
+
         $validated = $request->validate([
             'server_id' => 'required|exists:servers,id',
+            'user_id' => 'nullable|exists:users,id',
             'domain' => 'required|string|max:255',
             'username' => 'required|string|alpha_num|max:16|unique:hosting_accounts,username',
             'password' => 'required|string|min:8',
@@ -69,6 +80,7 @@ class HostingAccountController extends Controller
 
         $account = HostingAccount::create([
             'server_id' => $server->id,
+            'user_id' => $validated['user_id'] ?? null,
             'domain' => strtolower($validated['domain']),
             'username' => strtolower($validated['username']),
             'contact_email' => $validated['contact_email'] ?? null,
@@ -98,7 +110,7 @@ class HostingAccountController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Account '{$account->username}' created successfully.",
-            'data' => $account->load(['server', 'domains']),
+            'data' => $account->load(['server', 'domains', 'user']),
             'whm_response' => $whmResult,
         ], 201);
     }
@@ -108,8 +120,11 @@ class HostingAccountController extends Controller
      */
     public function show(HostingAccount $account): JsonResponse
     {
+        $this->authorize('view', $account);
+
         $account->load([
             'server',
+            'user',
             'emailAccounts',
             'databases',
             'domains',
@@ -127,7 +142,10 @@ class HostingAccountController extends Controller
      */
     public function update(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('update', $account);
+
         $validated = $request->validate([
+            'user_id' => 'nullable|exists:users,id',
             'contact_email' => 'nullable|email|max:255',
             'plan' => 'nullable|string|max:100',
             'disk_limit_mb' => 'nullable|integer|min:0',
@@ -161,6 +179,8 @@ class HostingAccountController extends Controller
      */
     public function destroy(HostingAccount $account): JsonResponse
     {
+        $this->authorize('delete', $account);
+
         $username = $account->username;
         $id = $account->id;
         $server = $account->server;
@@ -188,6 +208,8 @@ class HostingAccountController extends Controller
      */
     public function suspend(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('toggleSuspension', $account);
+
         $reason = $request->input('reason', 'Suspended via PitoHub Management');
 
         $service = CPanelApiService::forServer($account->server);
@@ -219,6 +241,8 @@ class HostingAccountController extends Controller
      */
     public function unsuspend(HostingAccount $account): JsonResponse
     {
+        $this->authorize('toggleSuspension', $account);
+
         $service = CPanelApiService::forServer($account->server);
         $res = $service->unsuspendAccount($account->username);
 
@@ -248,6 +272,8 @@ class HostingAccountController extends Controller
      */
     public function changePassword(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('changePassword', $account);
+
         $validated = $request->validate([
             'password' => 'required|string|min:8',
         ]);
@@ -274,6 +300,8 @@ class HostingAccountController extends Controller
      */
     public function ssoUrl(HostingAccount $account): JsonResponse
     {
+        $this->authorize('accessSso', $account);
+
         $service = CPanelApiService::forServer($account->server);
         $res = $service->createSessionUrl($account->username);
 

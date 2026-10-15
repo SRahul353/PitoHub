@@ -13,6 +13,7 @@ class Server extends Model
     protected $fillable = [
         'name',
         'hostname',
+        'server_type',
         'ip_address',
         'port',
         'protocol',

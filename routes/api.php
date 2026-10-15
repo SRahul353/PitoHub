@@ -26,20 +26,22 @@ Route::prefix('v1')->group(function () {
 
     // Protected API Endpoints (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
-        
+
         // Auth management
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-        // System statistics & activity logs
+        // System statistics (user or admin)
         Route::get('/stats', [SystemController::class, 'overviewStats']);
-        Route::get('/activity-logs', [SystemController::class, 'activityLogs']);
 
-        // Servers Management
-        Route::apiResource('servers', ServerController::class);
-        Route::post('/servers/{server}/test-connection', [ServerController::class, 'testConnection']);
-        Route::post('/servers/{server}/sync-accounts', [ServerController::class, 'syncAccounts']);
-        Route::get('/servers/{server}/stats', [ServerController::class, 'stats']);
+        // Admin-only Server Management & Activity Logs
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/activity-logs', [SystemController::class, 'activityLogs']);
+            Route::apiResource('servers', ServerController::class);
+            Route::post('/servers/{server}/test-connection', [ServerController::class, 'testConnection']);
+            Route::post('/servers/{server}/sync-accounts', [ServerController::class, 'syncAccounts']);
+            Route::get('/servers/{server}/stats', [ServerController::class, 'stats']);
+        });
 
         // Hosting (cPanel) Accounts Management
         Route::apiResource('accounts', HostingAccountController::class);

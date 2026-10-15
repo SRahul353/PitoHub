@@ -17,6 +17,8 @@ class DatabaseEntityController extends Controller
      */
     public function index(HostingAccount $account): JsonResponse
     {
+        $this->authorize('view', $account);
+
         return response()->json([
             'success' => true,
             'data' => $account->databases()->latest()->get(),
@@ -28,6 +30,8 @@ class DatabaseEntityController extends Controller
      */
     public function store(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         $validated = $request->validate([
             'database_name' => 'required|string|alpha_dash|max:64',
             'create_user' => 'nullable|boolean',
@@ -36,9 +40,9 @@ class DatabaseEntityController extends Controller
         ]);
 
         // In cPanel, DB names are prefixed with cpanel user, e.g. "user_dbname"
-        $dbName = str_starts_with($validated['database_name'], $account->username . '_')
+        $dbName = str_starts_with($validated['database_name'], $account->username.'_')
             ? $validated['database_name']
-            : $account->username . '_' . $validated['database_name'];
+            : $account->username.'_'.$validated['database_name'];
 
         $service = CPanelApiService::forServer($account->server);
         $res = $service->uapiCall($account->username, 'Mysql', 'create_database', [
@@ -46,10 +50,10 @@ class DatabaseEntityController extends Controller
         ]);
 
         $dbUser = null;
-        if (!empty($validated['create_user']) && !empty($validated['db_username']) && !empty($validated['db_password'])) {
-            $dbUser = str_starts_with($validated['db_username'], $account->username . '_')
+        if (! empty($validated['create_user']) && ! empty($validated['db_username']) && ! empty($validated['db_password'])) {
+            $dbUser = str_starts_with($validated['db_username'], $account->username.'_')
                 ? $validated['db_username']
-                : $account->username . '_' . $validated['db_username'];
+                : $account->username.'_'.$validated['db_username'];
 
             // Create DB user
             $service->uapiCall($account->username, 'Mysql', 'create_user', [
@@ -91,6 +95,8 @@ class DatabaseEntityController extends Controller
      */
     public function destroy(HostingAccount $account, DatabaseEntity $database): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         if ($database->hosting_account_id !== $account->id) {
             return response()->json(['error' => 'Resource not found for this account'], 404);
         }

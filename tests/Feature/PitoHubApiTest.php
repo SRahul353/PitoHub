@@ -13,7 +13,9 @@ class PitoHubApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected string $token;
+
     protected Server $server;
 
     protected function setUp(): void
@@ -22,6 +24,7 @@ class PitoHubApiTest extends TestCase
 
         $this->user = User::factory()->create([
             'email' => 'admin@pitohub.local',
+            'role' => 'admin',
         ]);
 
         $this->token = $this->user->createToken('Test Token')->plainTextToken;
@@ -56,7 +59,7 @@ class PitoHubApiTest extends TestCase
 
     public function test_list_servers(): void
     {
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->getJson('/api/v1/servers');
 
         $response->assertStatus(200)
@@ -65,7 +68,7 @@ class PitoHubApiTest extends TestCase
 
     public function test_server_test_connection(): void
     {
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson("/api/v1/servers/{$this->server->id}/test-connection");
 
         $response->assertStatus(200)
@@ -74,7 +77,7 @@ class PitoHubApiTest extends TestCase
 
     public function test_create_hosting_account(): void
     {
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson('/api/v1/accounts', [
                 'server_id' => $this->server->id,
                 'domain' => 'mybrand.com',
@@ -106,7 +109,7 @@ class PitoHubApiTest extends TestCase
         ]);
 
         // Suspend
-        $suspendResponse = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $suspendResponse = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson("/api/v1/accounts/{$account->id}/suspend", [
                 'reason' => 'Billing dispute',
             ]);
@@ -115,7 +118,7 @@ class PitoHubApiTest extends TestCase
         $this->assertTrue($account->fresh()->is_suspended);
 
         // Unsuspend
-        $unsuspendResponse = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $unsuspendResponse = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson("/api/v1/accounts/{$account->id}/unsuspend");
 
         $unsuspendResponse->assertStatus(200);
@@ -130,7 +133,7 @@ class PitoHubApiTest extends TestCase
             'username' => 'ssouser',
         ]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson("/api/v1/accounts/{$account->id}/sso-url");
 
         $response->assertStatus(200)
@@ -146,7 +149,7 @@ class PitoHubApiTest extends TestCase
         ]);
 
         // Create email
-        $createRes = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $createRes = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson("/api/v1/accounts/{$account->id}/emails", [
                 'email' => 'hello@mailtest.com',
                 'password' => 'Password123!',
@@ -159,7 +162,7 @@ class PitoHubApiTest extends TestCase
         $emailId = $createRes->json('data.id');
 
         // Delete email
-        $deleteRes = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $deleteRes = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->deleteJson("/api/v1/accounts/{$account->id}/emails/{$emailId}");
 
         $deleteRes->assertStatus(200);
@@ -167,7 +170,7 @@ class PitoHubApiTest extends TestCase
 
     public function test_system_stats(): void
     {
-        $response = $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->getJson('/api/v1/stats');
 
         $response->assertStatus(200)

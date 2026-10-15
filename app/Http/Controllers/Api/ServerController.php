@@ -35,8 +35,8 @@ class ServerController extends Controller
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('hostname', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%");
+                    ->orWhere('hostname', 'like', "%{$search}%")
+                    ->orWhere('ip_address', 'like', "%{$search}%");
             });
         }
 
@@ -91,8 +91,8 @@ class ServerController extends Controller
      */
     public function show(Server $server): JsonResponse
     {
-        $server->loadCount(['accounts', 'accounts as active_accounts_count' => fn($q) => $q->where('is_suspended', false)]);
-        $server->load(['accounts' => fn($q) => $q->latest()->take(10)]);
+        $server->loadCount(['accounts', 'accounts as active_accounts_count' => fn ($q) => $q->where('is_suspended', false)]);
+        $server->load(['accounts' => fn ($q) => $q->latest()->take(10)]);
 
         return response()->json([
             'success' => true,

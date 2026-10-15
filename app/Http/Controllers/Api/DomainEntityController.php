@@ -17,6 +17,8 @@ class DomainEntityController extends Controller
      */
     public function index(HostingAccount $account): JsonResponse
     {
+        $this->authorize('view', $account);
+
         return response()->json([
             'success' => true,
             'data' => $account->domains()->latest()->get(),
@@ -28,13 +30,15 @@ class DomainEntityController extends Controller
      */
     public function store(Request $request, HostingAccount $account): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         $validated = $request->validate([
             'domain_name' => 'required|string|max:255',
             'type' => 'required|in:addon,subdomain,alias',
             'document_root' => 'nullable|string|max:255',
         ]);
 
-        $docRoot = $validated['document_root'] ?? 'public_html/' . explode('.', $validated['domain_name'])[0];
+        $docRoot = $validated['document_root'] ?? 'public_html/'.explode('.', $validated['domain_name'])[0];
 
         $service = CPanelApiService::forServer($account->server);
 
@@ -82,6 +86,8 @@ class DomainEntityController extends Controller
      */
     public function destroy(HostingAccount $account, DomainEntity $domain): JsonResponse
     {
+        $this->authorize('manageResources', $account);
+
         if ($domain->hosting_account_id !== $account->id) {
             return response()->json(['error' => 'Resource not found for this account'], 404);
         }
