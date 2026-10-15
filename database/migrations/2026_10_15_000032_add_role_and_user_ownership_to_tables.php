@@ -12,15 +12,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('user')->after('password');
+            if (! Schema::hasColumn('users', 'role')) {
+                $table->string('role')->default('user')->after('password');
+            }
         });
 
         Schema::table('servers', function (Blueprint $table) {
-            $table->string('server_type')->default('cpanel_shared')->after('type'); // cpanel_shared or whm
+            if (! Schema::hasColumn('servers', 'server_type')) {
+                $table->string('server_type')->default('cpanel_shared')->after('hostname');
+            }
         });
 
         Schema::table('hosting_accounts', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->after('server_id')->constrained()->nullOnDelete();
+            if (! Schema::hasColumn('hosting_accounts', 'user_id')) {
+                $table->foreignId('user_id')->nullable()->after('server_id')->constrained()->nullOnDelete();
+            }
         });
     }
 
