@@ -11,22 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (! Schema::hasColumn('users', 'role')) {
+        try {
             Schema::table('users', function (Blueprint $table) {
                 $table->string('role')->default('user')->after('password');
             });
+        } catch (\Throwable $e) {
+            // Already added
         }
 
-        if (! Schema::hasColumn('servers', 'server_type')) {
+        try {
             Schema::table('servers', function (Blueprint $table) {
                 $table->string('server_type')->default('cpanel_shared')->after('hostname');
             });
+        } catch (\Throwable $e) {
+            // Already added
         }
 
-        if (! Schema::hasColumn('hosting_accounts', 'user_id')) {
+        try {
             Schema::table('hosting_accounts', function (Blueprint $table) {
                 $table->foreignId('user_id')->nullable()->after('server_id')->constrained()->nullOnDelete();
             });
+        } catch (\Throwable $e) {
+            // Already added
         }
     }
 
@@ -35,17 +41,26 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('hosting_accounts', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropColumn('user_id');
-        });
+        try {
+            Schema::table('hosting_accounts', function (Blueprint $table) {
+                $table->dropForeign(['user_id']);
+                $table->dropColumn('user_id');
+            });
+        } catch (\Throwable $e) {
+        }
 
-        Schema::table('servers', function (Blueprint $table) {
-            $table->dropColumn('server_type');
-        });
+        try {
+            Schema::table('servers', function (Blueprint $table) {
+                $table->dropColumn('server_type');
+            });
+        } catch (\Throwable $e) {
+        }
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role');
-        });
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('role');
+            });
+        } catch (\Throwable $e) {
+        }
     }
 };
